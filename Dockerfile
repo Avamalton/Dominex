@@ -1,47 +1,34 @@
-# syntax = docker/dockerfile:1
+# syntax=docker/dockerfile:1
 
-# Adjust BUN_VERSION as desired
-ARG BUN_VERSION=1.1.24
-FROM oven/bun:${BUN_VERSION}-slim AS base
+# Use the maintained Debian variant rather than the old Bullseye-based slim image.
+# Bullseye package URLs in the previous image were returning 404 during apt-get.
+FROM oven/bun:1-debian AS base
 
-LABEL fly_launch_runtime="Bun"
-
-# Bun app lives here
 WORKDIR /app
+ENV NODE_ENV=production
 
-# Set production environment
-ENV NODE_ENV="production"
-
-
-# Throw-away build stage to reduce size of final image
+# Build dependencies for native Node/Bun modules.
 FROM base AS build
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y build-essential pkg-config python3 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install packages needed to build node modules
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential pkg-config python-is-python3
+COPY bun.lock package.json ./
+RUN bun install
 
-    # Install node modules
-    COPY bun.lock package.json ./
-    RUN bun install
+COPY . .
+RUN bun run build
 
-    # Copy application code
-    COPY . .
+# Reinstall only production dependencies.
+RUN rm -rf node_modules \
+    && bun install --ci --production
 
-    # Build application
-    RUN bun run build
+# Runtime image
+FROM base AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
 
-    # Remove development dependencies
-    RUN rm -rf node_modules && \
-        bun install --ci
+COPY --from=build /app /app
 
-
-        # Final stage for app image
-        FROM base
-
-        # Copy built application
-        COPY --from=build /app /app
-
-        # Start the server by default, this can be overwritten at runtime
-        EXPOSE 3000
-        CMD [ "bun", "run", "start" ]
-        
+EXPOSE 8080
+CMD ["bun", "run", "start"]
