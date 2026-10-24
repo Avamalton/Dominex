@@ -1,7 +1,6 @@
-# fly.toml app configuration file generated for dominex-i-arda on 2026-10-24T09:26:58Z
+# fly.toml app configuration file
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
 
 app = 'dominex-i-arda'
 primary_region = 'sin'
@@ -9,19 +8,18 @@ primary_region = 'sin'
 [build]
 
 [env]
-  PORT = "8080"
+  PORT = '8080'
 
 [http_service]
   internal_port = 8080
-    force_https = true
-      auto_stop_machines = 'stop'
-        auto_start_machines = true
-          min_machines_running = 0
-            processes = ['app']
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
 
-            [[vm]]
-              memory = '1gb'
-                cpu_kind = 'shared'
-                  cpus = 1
-                    memory_mb = 256
-                    
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256
