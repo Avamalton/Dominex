@@ -277,7 +277,10 @@ export default function App() {
     const connectWs = () => {
       if (isDisposed) return;
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      // Vercel serves the static frontend; WebSockets must connect directly to the persistent Fly.io backend.
+      const wsUrl = import.meta.env.VITE_WS_URL || (import.meta.env.PROD
+        ? 'wss://dominex-i-arda.fly.dev/ws'
+        : `${protocol}//${window.location.host}/ws`);
       socket = new WebSocket(wsUrl);
 
       socket.onopen = () => {

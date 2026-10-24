@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://dominex-i-arda.fly.dev/api/$1"
+    }
+  ]
+}
