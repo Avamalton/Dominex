@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dimonex-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: dimonex_user
+      POSTGRES_PASSWORD: dimonex_secure_password_2026
+      POSTGRES_DB: dimonex_exchange
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dimonex_user -d dimonex_exchange"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: dimonex-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass dimonex_redis_pass_2026
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: dimonex-nats
+    restart: always
+    ports:
+      - "4222:4222"
+      - "8222:8222" # monitoring dashboard
+    command: ["-js", "-m", "8222"]
+
+  matching-engine-go:
+    build:
+      context: ../backend-go
+      dockerfile: Dockerfile
+    container_name: dimonex-engine
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    environment:
+      DATABASE_URL: "postgres://dimonex_user:dimonex_secure_password_2026@postgres:5432/dimonex_exchange?sslmode=disable"
+      NATS_URL: "nats://nats:4222"
+      ENGINE_PORT: "8080"
+
+  web-gateway:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: dimonex-gateway
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      DATABASE_URL: "postgres://dimonex_user:dimonex_secure_password_2026@postgres:5432/dimonex_exchange"
+      REDIS_URL: "redis://:dimonex_redis_pass_2026@redis:6379"
+
+volumes:
+  pgdata:

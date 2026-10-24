@@ -1,0 +1,110 @@
+openapi: 3.1.0
+info:
+  title: DIMONEX Spot Crypto Exchange API
+  version: 1.0.0
+  description: >-
+    Dokumentasi resmi REST dan WebSocket API DIMONEX Spot Crypto Exchange dengan Quote Currency Rupiah (IDR).
+    Semua kalkulasi moneter menggunakan integer fixed-point tanpa float. Autentikasi menggunakan Bearer JWT
+    atau HMAC-SHA256 signature.
+servers:
+  - url: http://localhost:3000
+    description: Dev server
+  - url: https://api.dimonex.id
+    description: Production gateway
+paths:
+  /api/auth/register:
+    post:
+      summary: Registrasi Akun Pengguna Baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+      responses:
+        '200':
+          description: Berhasil terdaftar
+  /api/auth/login:
+    post:
+      summary: Masuk Akun dengan Anti-Brute-Force & 2FA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+                totpCode: { type: string, description: "6 digit TOTP jika aktif" }
+      responses:
+        '200':
+          description: Berhasil masuk atau meminta kode 2FA
+  /api/trading/pairs:
+    get:
+      summary: Daftar Trading Pair Spot Aktif (BTC/IDR, ETH/IDR, USDT/IDR)
+      responses:
+        '200':
+          description: Array trading pair dengan 24h ticker data
+  /api/trading/depth/{pairId}:
+    get:
+      summary: Snapshot Order Book Level 2 Depth
+      parameters:
+        - name: pairId
+          in: path
+          required: true
+          schema: { type: string, example: "BTC-IDR" }
+      responses:
+        '200':
+          description: Bids dan Asks teragregasi
+  /api/trading/order:
+    post:
+      summary: Pasang Order Baru (Limit & Market, GTC / IOC)
+      security:
+        - BearerAuth: []
+        - HmacAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pairId, side, orderType, quantity]
+              properties:
+                pairId: { type: string }
+                side: { type: string, enum: [BUY, SELL] }
+                orderType: { type: string, enum: [LIMIT, MARKET] }
+                timeInForce: { type: string, enum: [GTC, IOC] }
+                price: { type: string, description: "Satuan sen IDR (misal 145000000000 untuk Rp 1.45M)" }
+                quantity: { type: string, description: "Satuan terkecil base currency (Satoshis / Wei)" }
+      responses:
+        '200':
+          description: Order diproses dan dieksekusi
+  /api/wallet/balances:
+    get:
+      summary: Saldo Dompet Pengguna (Available vs Locked)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Saldo lengkap per aset
+  /metrics:
+    get:
+      summary: Prometheus Standard Metrics
+      responses:
+        '200':
+          description: Text metric exposition
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+    HmacAuth:
+      type: apiKey
+      in: header
+      name: X-DIMONEX-APIKEY

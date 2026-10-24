@@ -1,0 +1,6 @@
+{
+  "name": "DIMONEX — Spot Crypto Exchange IDR",
+  "description": "Bursa spot aset kripto dengan quote currency Rupiah (IDR), double-entry ledger immutable, price-time priority matching engine, dan live market data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
